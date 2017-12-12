@@ -26,13 +26,14 @@ public class LAMSService {
     /**
     * Initialize the database.
     */
-    // @GET
-    // @Produces("application/xml")
+    @GET
+    @Produces("application/xml")
     public String initialize(){
         dbSingleton = DBSingleton.getInstance();
         dbSingleton.db.initialLoad("LAMS");
-        this.uri = this.context.getBaseUri().toString();
-        return this.uri+"application.wadl";
+        uri = context.getBaseUri().toString();
+        // uri = "http://localhost:8080/LAMSAppointment/webresources/Services/"; // test uri
+        return xmlHead+"<AppointmentList><intro>Welcome to the LAMS Appointment Service</intro><wadl>"+uri+"application.wadl</wadl></AppointmentList>";
     }
 
     /**
@@ -51,7 +52,6 @@ public class LAMSService {
         for (Object obj : objs){
             xml += formatAppointment(obj);
         }
-        xml += "<uri>"+uri+"</uri>";
         xml += "</AppointmentList>";
 
         return xml;
@@ -104,9 +104,11 @@ public class LAMSService {
         String id = ((Appointment)obj).getId();
         String time = ((Appointment)obj).getAppttime().toString();
         String xml = "<appointment date=\""+date+"\" id=\""+id+"\" time=\""+time+"\">";
+        xml += "<uri>"+uri+"Appointments/"+id+"</uri>";
 
         Patient patient = ((Appointment)obj).getPatientid();
         xml += tag("patient", patient.getId(), "id");
+        xml += "</uri>";
         xml += tag("name", patient.getName());
         xml += tag("address", patient.getAddress());
         xml += tag("insurance", Character.toString(patient.getInsurance()));
@@ -115,11 +117,13 @@ public class LAMSService {
 
         Phlebotomist phleb = ((Appointment)obj).getPhlebid();
         xml += tag("phlebotomist", phleb.getId(), "id");
+        xml += "</uri>";
         xml += tag("name", phleb.getName());
         xml += "</phlebotomist>";
 
         PSC psc = ((Appointment)obj).getPscid();
         xml += tag("psc", psc.getId(), "id");
+        xml += "</uri>";
         xml += tag("name", psc.getName());
         xml += "</psc>";
 
@@ -131,7 +135,9 @@ public class LAMSService {
         for (AppointmentLabTest apptTest : tests) {
             test = apptTest.getLabTest();
             dx = apptTest.getDiagnosis();
-            xml += "<appointmentLabTest appointmentId=\""+id+"\" dxcode=\""+dx.getCode()+"\" labTestId=\""+test.getKey()+"\"/>";
+            xml += "<appointmentLabTest appointmentId=\""+id+"\" dxcode=\""+dx.getCode()+"\" labTestId=\""+test.getKey()+"\">";
+            xml += "</uri>";
+            xml += "</appointmentLabTest>";
         }
 
         xml += "</allLabTests></appointment>";
@@ -229,7 +235,7 @@ public class LAMSService {
         List<Object> sameDayAppts = dbSingleton.db.getData("Appointment", "DATE(apptdate)='"+date+"'");
 
         if(BusinessLayer.isAvailable(newAppt, sameDayAppts) && dbSingleton.db.addData(newAppt)){
-            response = getAppointment(newApptId);
+            response = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><AppointmentList><uri>"+uri+"Appointments/"+newApptId+"</uri></AppointmentList>";
         } else {
             response = xmlHead+"<AppointmentList><error>ERROR:Appointment is not available</error></AppointmentList>";
         }
